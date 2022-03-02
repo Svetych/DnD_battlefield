@@ -35,6 +35,9 @@ class App(Tk):
         self.figure = None
         self.area = None
         
+        # playing
+        self.helper = None
+        
         # for editor:
         self.map_mode = IntVar()
         
@@ -110,10 +113,16 @@ class App(Tk):
         graph.HP = Entry(self.canva, graph.info_set)
         graph.AC = Entry(self.canva, graph.info_set)
         graph.GROUP = Button(self.canva, textvariable = self.token_group, **graph.group_set(f.GROUPS[0]), command = self.change_group)
-        graph.GAME = Button(self.canva, **graph.initiative_button_1, command = lambda m = const.REGIME.move: self.change_regime(m))
+        graph.GAME = Button(self.canva, **graph.initiative_button_1, command = self.start_playing)
+        graph.TURN_AGAIN = Button(self.canva, **graph.turn_again, command = self.turn_again)
+        graph.TURN_NEXT = Button(self.canva, **graph.turn_next, command = lambda e = None : self.turn_next(e))
+        graph.ROUND = Button(self.canva, **graph.round_button, command = self.next_round)
+        graph.SCROLL = Scrollbar(self)
+        graph.INITIATIVE = Listbox(self.canva, **graph.listbox, yscrollcommand = graph.SCROLL.set)
+        graph.SCROLL.config(command = graph.INITIATIVE.yview)
+        graph.TEXT_6 = Label(self.canva, graph.text_6)
         
-        
-    
+            
     def clean(self, l):
         for tag in l:
             self.canva.delete(tag)
@@ -281,7 +290,6 @@ class App(Tk):
     
     
     # GAME 
-    
     
     def load_game_interface(self):
         self.canva.create_rectangle(const.game_bg_1(), graph.bg)
@@ -566,7 +574,8 @@ class App(Tk):
             
         elif new == const.REGIME.editor:
             self.clean(["cell", "map", "net", "bg", "button", "token"])
-            graph.del_game_settings()         
+            graph.del_game_settings()
+            self.end_playing()
     
     
     def draw_token(self, t):
@@ -598,11 +607,17 @@ class App(Tk):
             j, i = coords
             t = self.field.net[i][j].token
             if t:
+                if self.helper:
+                    if t.ID == self.helper.player.ID:
+                        return
                 self.token_size_foot.set(t.size*5)
                 self.moving_obj.append(self.canva.create_rectangle(const.get_token_coords(t, h, w, c, m),
                                                               graph.moving_object(t, c)))
                 self.moving_token = t
                 self.change_regime(const.REGIME.moving)
+                
+            elif self.helper:
+                self.make_step(i, j)
                         
     def put_check(self, i, j, size, h, w, c, m):
         t = self.moving_token
@@ -624,7 +639,8 @@ class App(Tk):
                 t = self.put_check(i, j, self.get_token_size(), h, w, c, m)
                 self.field.add_token(t)
                 self.change_regime(const.REGIME.move)
-                
+                if self.helper:
+                    self.helper.change_info(t)
             else:
                 put_check = True
                 x_0, y_0 = self.area.x, self.area.y
@@ -636,6 +652,8 @@ class App(Tk):
                     for t in self.area.tokens:
                         self.moving_token = t
                         new_area.append(self.put_check(i + t.x - x_0, j + t.y - y_0, t.size, h, w, c, m))
+                        if self.helper:
+                            self.helper.change_info(t)
                     self.area = f.Area(new_area)
                 for t in self.area.tokens:
                     self.field.add_token(t)
@@ -661,6 +679,9 @@ class App(Tk):
                 t = f.Token(i, j, self.get_token_size(), self.token_color, self.token_group.get())
                 t.ID = self.draw_token(t)
                 self.field.add_token(t)
+                if self.helper:
+                    self.helper.add_toke(t)
+                    self.next_round()
         self.change_regime(const.REGIME.move)
        
     def del_token(self, event):
@@ -673,12 +694,17 @@ class App(Tk):
             if t:
                 self.clean([t.ID])
                 self.field.delete_token(t)
+                if self.helper:
+                    self.helper.remove_toke(t)
+                    self.next_round()
     
     def clean_field(self):
         if graph.delete_message():
             for t in self.field.get_tokens():
                 self.clean([t.ID])
-                self.field.delete_token(self.field.net[t.x][t.j].token)
+                self.field.delete_token(self.field.net[t.x][t.y].token)
+            if self.helper:
+                self.end_playing()
     
     def open_colors(self, event):
         self.change_regime(const.REGIME.color)
@@ -775,6 +801,14 @@ class App(Tk):
                 self.change_regime(const.REGIME.info)
     
     def end_info(self, event):
+        if self.helper:
+            if event:
+                x, y = event.x, event.y
+                h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
+                coords = const.check_field_coords(x, y, h, w, c, m)
+                if coords:
+                    j, i = coords
+                    self.make_step(i, j)
         self.change_regime(const.REGIME.move)
     
     def change_group(self):
@@ -806,9 +840,11 @@ class App(Tk):
             self.field.net[i][j].token.initiative = int(graph.INIC.get())
             self.field.net[i][j].token.hp = graph.HP.get()
             self.field.net[i][j].token.ac = graph.AC.get()
+            if self.helper:
+                self.helper.change_info(self.field.net[i][j].token)
     
     def info_return(self, event):
-        self.save_info()     
+        self.save_info()
         self.end_info(None)
     
     def create_area(self, event):
@@ -848,15 +884,104 @@ class App(Tk):
             j, i = coords
             t = self.field.net[i][j].token
             if t in self.area.tokens:
+                if self.helper:
+                    tokens = self.area.tokens
+                    if self.helper.player in tokens:
+                        tokens.remove(self.helper.player)
+                        self.area = f.Area(tokens)
                 for t in self.area.tokens:
                     self.moving_obj.append(self.canva.create_rectangle(const.get_token_coords(t, h, w, c, m), 
                                                                        graph.moving_object(t, c)) )
                 self.change_regime(const.REGIME.moving)
-            else:
-                self.end_together()
+            elif self.helper:
+                if not(self.make_step(i, j)):
+                    self.end_together()
     
     def end_together(self):
         self.change_regime(const.REGIME.move)
+    
+    
+    def draw_star(self):
+        self.clean(['star'])
+        h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
+        self.canva.create_polygon(const.star_coords(self.helper.player, h, w, c, m), graph.star)
+    
+    def draw_step(self, i, j, n):
+        h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
+        for dx in range(self.helper.player.size):
+            for dy in range(self.helper.player.size):
+                self.canva.create_rectangle(const.get_cell_coords(i+dx, j+dy, h, w, c, m), graph.step_color(n))
+    
+    def make_step(self, x, y):
+        if self.helper.do_next_step(x, y, self.field):
+            self.clean(['step'])
+            for i, j in self.helper.path:
+                self.draw_step(i, j, self.helper.path.count((i, j)))
+            return True
+        return False
+    
+    def upload_listbox(self, text):
+        graph.INITIATIVE.delete(0, graph.INITIATIVE.size())
+        for s in text:
+            graph.INITIATIVE.insert(END, s)        
+    
+    def start_playing(self):
+        tokens = self.field.get_tokens()
+        if tokens:
+            self.helper = f.Game(tokens, StringVar())
+            self.draw_star()
+            graph.GAME.config(**graph.initiative_button_2, command = self.end_playing)
+            graph.TEXT_6.config(textvariable = self.helper.end_of_turn)
+            graph.load_playing_settings()
+            self.upload_listbox(self.helper.give_inic())
+            self.bind('<space>', self.turn_next)
+    
+    def turn_again(self):
+        self.clean(['step'])
+        if self.regime == const.REGIME.moving:
+            if self.area:
+                self.change_regime(const.REGIME.together)
+            else:
+                self.change_regime(const.REGIME.move)        
+        self.helper.reset_turn()
+    
+    def turn_next(self, event):
+        self.clean(['step'])
+        if self.regime == const.REGIME.moving:
+            if self.area:
+                self.change_regime(const.REGIME.together)
+            else:
+                self.change_regime(const.REGIME.move)
+        i, j = self.helper.path[-1]
+        t = self.helper.player
+        self.field.delete_token(t)
+        t.change_coords(i, j)
+        self.field.add_token(t)
+        h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
+        self.canva.coords(t.ID, const.get_token_coords(t, h, w, c, m))
+        self.helper.next_turn()
+        
+        self.draw_star()
+        
+        self.upload_listbox(self.helper.give_inic())
+    
+    def next_round(self):
+        self.clean(['step'])
+        if self.regime == const.REGIME.moving:
+            if self.area:
+                self.change_regime(const.REGIME.together)
+            else:
+                self.change_regime(const.REGIME.move)        
+        self.helper.next_round()
+        self.draw_star()
+        self.upload_listbox(self.helper.give_inic())
+    
+    def end_playing(self):
+        graph.GAME.config(**graph.initiative_button_1, command = self.start_playing)
+        graph.del_playing_settings()
+        self.helper = None
+        self.clean(['star', 'step'])
+        self.unbind('<space>')
     
     def to_game(self):
         self.change_regime(const.REGIME.move)
@@ -871,7 +996,6 @@ class App(Tk):
         self.change_regime(const.REGIME.editor)
         
         self.tokens_to_put = self.field.get_tokens_coords()
-        
         self.to_editor()
         
         

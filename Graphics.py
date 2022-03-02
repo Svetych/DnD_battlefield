@@ -21,6 +21,12 @@ def map_color(mode):
 
 ruler_color = "black"
 highlight_color = "azure"
+def step_color(n):
+    if n % 2:
+        return {'fill' : "gold", 'stipple' : "gray50", 'tag' : 'step'}
+    else:
+        return {'fill' : "dark orange", 'stipple' : "gray50", 'tag' : 'step'}
+
 
 # CONFIGS:
 def cells(mode, oc, img):
@@ -77,6 +83,16 @@ bg = {'fill'    : "SystemMenu",
       'outline' : "White",
       'tag'     : 'bg'}
 
+listbox = {'bg'    : "SystemMenu",
+           'selectmode' : BROWSE,
+           #'selectbackground' : "SystemMenu",
+           'width' : const.max_str_len,
+           'font'  : 'TkFixedFont'}
+
+star = {'fill'    : 'red',
+        'width'   : 2,
+        'outline' : 'black',
+        'tag'     : 'star'}
 
 # Buttons configs:
 exit_button = {'text' : 'Выход',
@@ -276,6 +292,23 @@ def group_set(c):
     res['relief'] = RIDGE
     return res
 
+turn_again = {'text'   : 'Заново',
+              'height' : 2,
+              'bg'     : "sandy brown",
+              'font'   : const.text_size_exsmall}
+
+turn_next = {'text'   : 'Вперед',
+             'height' : 2,
+             'bg'     : "SpringGreen4",
+             'fg'     : "white",
+             'font'   : const.text_size_exsmall}
+
+round_button = {'text'   : 'Раунд',
+                'height' : 2,
+                'bg'     : "light goldenrod",             
+                'font'   : const.text_size_exsmall}
+
+text_6 = {'font' : const.text_size_exsmall}
 
 
 # VIGETS:
@@ -321,6 +354,8 @@ GROUP = None
 TURN_AGAIN = None
 TURN_NEXT = None
 ROUND = None
+INITIATIVE = None
+SCROLL = None
 
 # Texts:
 TEXT_1 = None
@@ -328,6 +363,7 @@ TEXT_2 = None
 TEXT_3 = None
 TEXT_4 = None
 TEXT_5 = None
+TEXT_6 = None
 SETTING = None
 NAME_T = None
 SPEED_T = None
@@ -452,6 +488,15 @@ def load_together_settings():
     GROUP_T.place(const.info_set(6, 0))
     GROUP.place(const.info_set(6, 1))
 
+def load_playing_settings():
+    TURN_AGAIN.place(const.turn_again())
+    TURN_NEXT.place(const.turn_next())
+    ROUND.place(const.round_button())
+    TEXT_6.place(const.text_6())
+    INITIATIVE.place(const.initiative())
+    SCROLL.place(const.scroll())
+    
+
 def del_editor_settings():
     AGAIN.place_forget()
     SAVE.place_forget()
@@ -517,6 +562,16 @@ def del_info_settings():
     INIC.delete(0, END)
     HP.delete(0, END)
     AC.delete(0, END)
+
+def del_playing_settings():
+    TURN_AGAIN.place_forget()
+    TURN_NEXT.place_forget()
+    ROUND.place_forget()
+    TEXT_6.place_forget()
+    INITIATIVE.place_forget()
+    SCROLL.place_forget()
+    
+    INITIATIVE.delete(0, INITIATIVE.size())
 
 def del_game_settings():
     EDITOR.place_forget()

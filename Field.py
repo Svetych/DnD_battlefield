@@ -88,6 +88,13 @@ class Field():
                     return False
         return True
     
+    def check_terrain(self, x, y, size):
+        for i in range(size):
+            for j in range(size):
+                if self.net[x+i][y+j].occupied == OCCUPIED.dt:
+                    return True
+        return False
+    
     def make_config(self):
         configs = []
         tokens = set([])
@@ -277,6 +284,156 @@ class Area():
         n_0, m_0, n_1, m_1 = 2*(t.x-i_0)-1, 2*(t.y-j_0)-1, 2*(t.x-i_0+t.size)-1, 2*(t.y-j_0+t.size)-1
         return x + m_0*c, y + n_0*c, x + m_1*c, y + n_1*c
     
+class Game():
+    def __init__(self, tokens, strvar):
+        self.initiative = sorted(tokens, key = lambda x: x.initiative)
+        self.turn = 0
+        self.end_of_turn = strvar
+        self.end_of_turn.set('')
+        self.player = self.initiative[0]
+        self.speed = self.player.speed // 5
+        self.coords = (self.player.x, self.player.y)
+        self.path = [self.coords]
+        self.flag_diag = True
+        
+    def get_next_step(self, field):
+        x, y = self.path[-1]
+        res = []
+        coords = [(x-1, j) for j in range(y-1, y+1+self.player.size)]
+        coords.extend([(i, y+self.player.size) for i in range(x, x+1+self.player.size)])
+        coords.extend([(x+self.player.size, j) for j in range(y-1, y+self.player.size)])
+        coords.extend([(i, y-1) for i in range(x, x+self.player.size)])
+        for i, j in coords:
+            if i < field.height and j < field.width:
+                res.append((i, j))
+        return res
+    
+    def check_speed(self, field):
+        if self.speed == 0:
+            return True
+        i_0, j_0 = self.path[-1]
+        size = self.player.size        
+        coords = self.get_next_step(field)
+        diag = [(i_0-1, j_0-1), (i_0-1, j_0+size), (i_0+size, j_0+1), (i_0+size, j_0+size)]
+        for i, j in coords:
+            if field.check_cells(i, j, size):
+                if (i, j) in diag:
+                    terrain = 2 if field.check_terrain(i, j, size) else 1
+                    new_s = self.speed - 1*terrain if self.flag_diag else self.speed - 2*terrain
+                    if new_s >= 0:
+                        return False
+                else:
+                    new_s = self.speed - 2 if field.check_terrain(i, j, size) else self.speed - 1
+                    if new_s >= 0:
+                        return False
+        return True
+    
+    def get_new_coords(self, x, y, size):
+        x_0, y_0 = self.path[-1]
+        dx, dy = 0, 0
+        if x == x_0+size:
+            dx = 1
+        elif x == x_0-1:
+            dx = -1
+        if y == y_0+size:
+            dy = 1
+        elif y == y_0-1:
+            dy = -1
+        return x_0+dx, y_0 + dy
+    
+    def do_next_step(self, x, y, field):
+        x_0, y_0 = self.path[-1]
+        size = self.player.size
+        i, j = self.get_new_coords(x, y, size)
+        field.delete_token(self.player)
+        if field.check_cells(i, j, size):
+            diag = [(x_0-1, y_0-1), (x_0-1, y_0+size), (x_0+size, y_0+1), (x_0+size, y_0+size)]
+            coords = self.get_next_step(field)
+            if (x, y) in coords:
+                if (x, y) in diag:
+                    terrain = 2 if field.check_terrain(i, j, size) else 1
+                    new_s = self.speed - 1*terrain if self.flag_diag else self.speed - 2*terrain
+                    if new_s >= 0:
+                        self.flag_diag = not(self.flag_diag)
+                else:
+                    new_s = self.speed - 2 if field.check_terrain(i, j, size) else self.speed - 1
+                if new_s >= 0:
+                    self.speed = new_s
+                    self.path.append((i, j))
+                    if self.check_speed(field):
+                        self.end_of_turn.set('Конец хода!')
+                    field.add_token(self.player)
+                    return True
+        field.add_token(self.player)
+        return False
+     
+    def renew(self):
+        self.end_of_turn.set('')
+        self.player = self.initiative[self.turn]
+        self.speed = self.player.speed // 5
+        self.coords = (self.player.x, self.player.y)
+        self.path = [self.coords]
+        self.flag_diag = True
+    
+    def reset_turn(self):
+        self.renew()
+        
+    def next_round(self):
+        self.turn = 0
+        self.renew()
+        
+    def next_turn(self):
+        self.turn += 1
+        if self.turn == len(self.initiative):
+            self.next_round()
+        else:
+            self.renew()
+            
+    def reset_initiative(self):
+        self.initiative = sorted(self.initiative, key = lambda x: x.initiative)
+        self.next_round()
+            
+    def change_info(self, token):
+        i = -1
+        for j, t in enumerate(self.initiative):
+            if t.ID == token.ID:
+                i == j
+        if i > -1:
+            self.initiative.pop(i)
+            self.append(token)
+        
+    def remove_toke(self, token):
+        self.initiative.remove(token)
+        if self.initiative:
+            self.reset_initiative()
+            return True
+        return False
+        
+    def add_toke(self, token):
+        self.initiative.append(token)
+        self.reset_initiative()
+        
+    def give_inic(self):
+        res = []
+        for i in range(self.turn, len(self.initiative)):
+            name = self.initiative[i].name
+            if len(name) > const.max_str_len-3:
+                name = name[:const.max_str_len-7]
+                name += '...'
+            for j in range(len(name), const.max_str_len-3):
+                name += ' '
+            res.append(name + str(self.initiative[i].initiative)[:2])
+        res.extend(['', '   ~~~ next turn ~~~', ''])
+        for i in range(self.turn):
+            name = self.initiative[i].name
+            if len(name) > const.max_str_len-3:
+                name = name[:const.max_str_len-7]
+                name += '...'
+            for j in range(len(name), const.max_str_len-3):
+                name += ' '
+            res.append(name + str(self.initiative[i].initiative)[:2])
+        return res
+        
 
 # SAVING FUNCTIONS
 def save_file(field, mode):

@@ -95,7 +95,7 @@ def get_new_coords(t, field_h, field_w, c, mode):
 
 def editor_bg():
     return (canva_width - indent_1 - indent_3, 2*indent_1 + indent_4,
-            canva_width - indent_1, canva_height - indent_1 - indent_2 - indent_3)
+            canva_width, canva_height - indent_1 - indent_2 - indent_3)
 
 def game_bg_1():
     return (indent_1, indent_1, indent_1 + indent_3, canva_height-indent_1)
@@ -208,6 +208,7 @@ def initiative_button():
     res['x'] = indent_1 + 4*indent_2 + indent_3 + 3*indent_4
     res['y'] = 2*indent_1
     res['height'] = button_size
+    res['width'] = 2*button_size + indent_1
     return res
 
 def color_change():
@@ -296,7 +297,6 @@ def ruler_res(x_1, y_1, u):
         return x_1, y_1 + 2*indent_2
     else:
         return x_1, y_1 - indent_2
-    
 
 
 def text_5():
@@ -319,3 +319,55 @@ def save_info():
     res['x'] = indent_1 + 3*indent_2 + indent_3 + 3*indent_4
     res['y'] = indent_4
     return res
+
+def turn_again():
+    res = {'anchor' : 'sw'}
+    res['x'] = indent_1 + 4*indent_2 + indent_3 + 3*indent_4
+    res['y'] = indent_4
+    res['width'] = button_size
+    return res
+
+def text_6():
+    res = {'anchor' : 'nw'}
+    res['x'] = 2*indent_1 + 4*indent_2 + indent_3 + 3*indent_4
+    res['y'] = 2*indent_1 + button_size
+    return res
+
+def turn_next():
+    res = {'anchor' : 'sw'}
+    res['x'] = 2*indent_1 + 4*indent_2 + indent_3 + 3*indent_4 + button_size
+    res['y'] = indent_4
+    res['width'] = button_size
+    return res
+
+def round_button():
+    res = {'anchor' : 'sw'}
+    res['x'] = 4*indent_1 + 5*indent_2 + 2*indent_3 + 3*indent_4 + 2*button_size
+    res['y'] = indent_4
+    res['width'] = button_size
+    return res
+
+def initiative():
+    res = {'anchor' : 'nw'}
+    res['x'] = 3*indent_1 + 4*indent_2 + indent_3 + 3*indent_4 + 2*button_size
+    res['y'] = 2*indent_1
+    res['height'] = indent_4 - 2*indent_1
+    return res
+
+def scroll():
+    res = {'anchor' : 'nw'}
+    res['x'] = 2*indent_1 + 4*indent_2 + 2*indent_3 + 3*indent_4 + 2*button_size
+    res['y'] = 2*indent_1
+    res['height'] = indent_4 - 2*indent_1
+    return res
+
+def star_coords(t, field_h, field_w, c, mode):
+    star = (0, 12, 10, 10, 15, 0, 20, 10, 30, 12, 23, 19, 25, 28, 15, 25, 5, 28, 7, 19)
+    
+    x_0, y_0, x_1, y_1 = get_token_coords(t, field_h, field_w, c, mode)
+    star = [i*(x_1 - x_0) // 30 for i in star]
+    for i in range(0, len(star), 2):
+        star[i] += x_0
+    for i in range(1, len(star), 2):
+        star[i] += y_0
+    return tuple(star)
