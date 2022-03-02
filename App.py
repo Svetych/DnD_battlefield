@@ -893,6 +893,7 @@ class App(Tk):
                     self.moving_obj.append(self.canva.create_rectangle(const.get_token_coords(t, h, w, c, m), 
                                                                        graph.moving_object(t, c)) )
                 self.change_regime(const.REGIME.moving)
+                return
             elif self.helper:
                 if self.make_step(i, j):
                     return
