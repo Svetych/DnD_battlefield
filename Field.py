@@ -287,6 +287,7 @@ class Area():
 class Game():
     def __init__(self, tokens, strvar):
         self.initiative = sorted(tokens, key = lambda x: x.initiative)
+        self.initiative.reverse()
         self.turn = 0
         self.end_of_turn = strvar
         self.end_of_turn.set('')
@@ -391,6 +392,7 @@ class Game():
             
     def reset_initiative(self):
         self.initiative = sorted(self.initiative, key = lambda x: x.initiative)
+        self.initiative.reverse()
         self.next_round()
             
     def change_info(self, token):
