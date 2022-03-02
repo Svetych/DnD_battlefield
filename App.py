@@ -894,8 +894,9 @@ class App(Tk):
                                                                        graph.moving_object(t, c)) )
                 self.change_regime(const.REGIME.moving)
             elif self.helper:
-                if not(self.make_step(i, j)):
-                    self.end_together()
+                if self.make_step(i, j):
+                    return
+        self.end_together()
     
     def end_together(self):
         self.change_regime(const.REGIME.move)
