@@ -496,6 +496,11 @@ def load_playing_settings():
     INITIATIVE.place(const.initiative())
     SCROLL.place(const.scroll())
     
+def upload_listbox(text):
+    INITIATIVE.delete(0, INITIATIVE.size())
+    for s in text:
+        INITIATIVE.insert(END, s)      
+
 
 def del_editor_settings():
     AGAIN.place_forget()

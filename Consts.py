@@ -6,6 +6,8 @@ from enum import Enum
 max_str_len = 24
 max_field_l = 300
 
+cell_foot_size = 5
+
 # Enums:
 class REGIME(Enum):
     editor = 0
@@ -35,6 +37,7 @@ text_size_medium = ('','16')
 text_size_small = ('','14')
 text_size_exsmall = ('','11')
 
+tokens_scale, buttons_scale = 6, 0.8
 
 # Calculating consts:
 def get_net_size():
@@ -87,11 +90,13 @@ def check_field_coords(x, y, field_h, field_w, c, mode):
 
 def get_token_coords(t, field_h, field_w, c, mode):
     x_0, y_0 = get_min_coords(field_h, field_w, c, mode)
-    return x_0+c*t.y + c//6, y_0+c*t.x + c//6, x_0+c*(t.y+t.size) - c//6, y_0+c*(t.x+t.size) - c//6
+    s = tokens_scale
+    return x_0+c*t.y + c//s, y_0+c*t.x + c//s, x_0+c*(t.y+t.size) - c//s, y_0+c*(t.x+t.size) - c//s
 
 def get_new_coords(t, field_h, field_w, c, mode):
     x_0, y_0 = get_min_coords(field_h, field_w, c, mode)
-    return x_0+c*t - c//6, y_0+c*t - c//6, x_0+c*t - c//6, y_0+c*t - c//6  
+    s = tokens_scale
+    return x_0+c*t - c//s, y_0+c*t - c//s, x_0+c*t - c//s, y_0+c*t - c//s  
 
 def editor_bg():
     return (canva_width - indent_1 - indent_3, 2*indent_1 + indent_4,
@@ -131,7 +136,7 @@ def again_button():
     res = {'anchor' : 'nw'}
     res['x'] = indent_2
     res['y'] = indent_1
-    res['width'] = int((canva_width-indent_4)/3*0.8)
+    res['width'] = int((canva_width-indent_4)/3*buttons_scale)
     res['height'] = indent_4
     return res
 
@@ -139,7 +144,7 @@ def save_button_1():
     res = {'anchor' : 'ne'}
     res['x'] = canva_width - indent_1 - indent_2 - indent_4
     res['y'] = indent_1
-    res['width'] = int((canva_width-indent_4)/3*0.8)
+    res['width'] = int((canva_width-indent_4)/3*buttons_scale)
     res['height'] = indent_4
     return res
 
@@ -155,7 +160,7 @@ def load_button():
     res = {'anchor' : 'n'}
     res['x'] = (canva_width-indent_4)//2
     res['y'] = indent_1
-    res['width'] = int((canva_width-indent_4)/3*0.8)
+    res['width'] = int((canva_width-indent_4)/3*buttons_scale)
     res['height'] = indent_4
     return res
      
@@ -268,17 +273,17 @@ def setting(a, i, j):
     return res
 
 scale_size_1 = {'length'       : indent_3 - indent_1 - indent_2,
-                'from_'        : 5,
-                'to'           : 20,
-                'tickinterval' : 5,
-                'resolution'   : 5,
+                'from_'        : cell_foot_size,
+                'to'           : 4*cell_foot_size,
+                'tickinterval' : cell_foot_size,
+                'resolution'   : cell_foot_size,
                 'font'         : text_size_medium}
 
 scale_size_2 = {'length'       : indent_3 - indent_1 - indent_2,
                 'from_'        : 0,
-                'to'           : 100,
-                'tickinterval' : 20,
-                'resolution'   : 5,
+                'to'           : 20*cell_foot_size,
+                'tickinterval' : 4*cell_foot_size,
+                'resolution'   : cell_foot_size,
                 'font'         : text_size_exsmall}
 
 

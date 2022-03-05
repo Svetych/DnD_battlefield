@@ -59,6 +59,7 @@ class App(Tk):
         self.regime = const.REGIME.editor
         self.to_editor()
         
+    # инициализация кнопок
     def buttons_init(self):
         graph.EXIT = Button(self.canva, **graph.exit_button, command = self.quit)
         graph.AGAIN = Button(self.canva, **graph.again_button, command = self.new_map)
@@ -123,20 +124,24 @@ class App(Tk):
         graph.TEXT_6 = Label(self.canva, graph.text_6)
         
             
-    def clean(self, l):
-        for tag in l:
+    # очистка поля от объектов канвы с тегами из массива tags
+    def clean(self, tags):
+        for tag in tags:
             self.canva.delete(tag)
         
+    # выход из приложения
     def quit(self):
         if graph.quit_message():
             self.destroy()
     
+    # проверка: отображать ли сетку на поле
     def check_map(self):
         if self.net.get():
             self.draw_net()
         else:
             self.clean(['net'])
     
+    # функция отрисовки игрового поля
     def draw_map(self):
         if self.field.image:
             self.canva.create_image(const.get_min_coords(self.field.height, self.field.width, self.cell_size, self.regime),
@@ -150,6 +155,7 @@ class App(Tk):
         if self.regime == const.REGIME.editor:
             self.draw_map_tokens(self.tokens_to_put)
            
+    # функция отрисовки сетки на игровом поле
     def draw_net(self):
         h, w, c = self.field.height, self.field.width, self.cell_size
         x_0, y_0 = const.get_min_coords(h, w, c, self.regime)
@@ -158,6 +164,7 @@ class App(Tk):
         for i in range(self.field.width+1):
             self.canva.create_line(x_0+c*i, y_0, x_0+c*i, y_0+c*h, tag="net")
     
+    # функция отрисовки клеток на игровом поле
     def draw_cells(self):
         h, w, c = self.field.height, self.field.width, self.cell_size
         img = True if self.field_image else False
@@ -170,6 +177,7 @@ class App(Tk):
         
     # MAP EDITOR
     
+    # загрузка интерфейса редактора карт
     def load_editor_interface(self):
         self.canva.create_rectangle(const.editor_bg(), graph.bg)   
         
@@ -180,13 +188,15 @@ class App(Tk):
         graph.NET_H.insert(0, self.field.height)
         
     
-    def load_map_image(self):
+    # отрисовка изображения для фона поля
+    def draw_map_image(self):
         self.field_image = Image.open(self.field.image) if self.field.image else None
         if self.field.image:
             image = Image.open(self.field.image)
             size = const.get_field_size(self.field.height, self.field.width, self.cell_size)
             self.field_image = ImageTk.PhotoImage(image.resize(size))
     
+    # функция отрисовки фишек по координатам из coords при загрузке в редакторе карт
     def draw_map_tokens(self, coords):
         if coords:
             c = self.cell_size
@@ -196,33 +206,34 @@ class App(Tk):
                 self.canva.create_oval(x_0+c*y, y_0+c*x, x_0+c*(y+s), y_0+c*(x+s), graph.map_tokens)        
     
     
-    def check_mode(self):
-        return f.OCCUPIED(self.map_mode.get())
-    
+    # функция обновления поля при нажатии мыши (event)
     def change_cells(self, event):
         x, y = event.x, event.y
         coords = const.check_field_coords(x, y, self.field.height, self.field.width, self.cell_size, self.regime)
         if coords:
             j, i = coords
-            self.field.change_cell(i, j, self.check_mode())
+            self.field.change_cell(i, j, f.OCCUPIED(self.map_mode.get()))
             self.clean(["cell"])
             self.draw_cells()
     
+    # сохранение карты
     def save_map(self):
         file = graph.saving_message()
         if file:
             file.write(f.save_file(self.field, self.regime))
             file.close()
         
+    # загрузка изображения для фона поля
     def load_img(self):
         filename = graph.load_img_message()
         if filename:
             self.field.image = filename
             self.field_image = Image.open(filename)
             self.clean(["cell", "map", "net", "token"])
-            self.load_map_image()
+            self.draw_map_image()
             self.draw_map()
             
+    # создание нового поля
     def new_map(self):
         if graph.again_message():
             new_h, new_w = int(graph.NET_H.get()), int(graph.NET_W.get())
@@ -230,7 +241,7 @@ class App(Tk):
             if new_w > 0 and new_h > 0 and new_w < const.max_field_l+1 and new_h < const.max_field_l+1:
                 self.tokens_to_put = []
                 self.field = f.Field(new_w, new_h)
-                self.load_map_image()
+                self.draw_map_image()
                 self.cell_size = const.get_cell_size(self.field.height, self.field.width)
                 self.clean(["cell", "map", "net", "token"])
                 self.draw_map()
@@ -241,6 +252,7 @@ class App(Tk):
             else:
                 graph.errors("Слишком большие размеры поля") 
     
+    # загрузка карты из файла
     def load_map(self):
         filename = graph.load_message()
         if filename:
@@ -268,20 +280,23 @@ class App(Tk):
             self.to_editor()
     
     
+    # загрузка режима редактора карт
     def to_editor(self):
         self.load_editor_interface()
         
         self.cell_size = const.get_cell_size(self.field.height, self.field.width)
-        self.load_map_image()
+        self.draw_map_image()
         self.draw_map()
         
         self.canva.bind('<Button-1>', self.change_cells)
         self.canva.bind('<B1-Motion>', self.change_cells)
         
+    # завершение режима редактора карт
     def out_editor(self):
         self.clean(["cell", "map", "net", "bg", "token"])
         graph.del_editor_settings()       
         
+    # загрузка режима игры
     def load_game(self):
         self.out_editor()
         self.canva.unbind('<Button-1>')
@@ -291,6 +306,7 @@ class App(Tk):
     
     # GAME 
     
+    # загрузка интерфейса игры
     def load_game_interface(self):
         self.canva.create_rectangle(const.game_bg_1(), graph.bg)
         self.canva.create_rectangle(const.game_bg_2(), graph.bg)
@@ -300,7 +316,7 @@ class App(Tk):
         graph.COLOR_BUT = self.canva.create_rectangle(const.color_change(), graph.change_color(self.token_color, "button"))
         self.canva.tag_bind(graph.COLOR_BUT, '<Double-Button-1>', self.open_colors)
         self.canva.tag_bind(graph.COLOR_BUT, '<Button-3>', self.open_colors)
-        self.canva.tag_bind(graph.COLOR_BUT, '<Button-1>', self.coloring)        
+        self.canva.tag_bind(graph.COLOR_BUT, '<Button-1>', lambda event, m = const.REGIME.coloring: self.change_regime(m))        
         graph.AREA[f.FIGURE.l] = self.canva.create_rectangle(const.area_l(), graph.area_button)
         butt = self.canva.create_line(const.area_l_i(), graph.area_button_il)
         self.canva.tag_bind(graph.AREA[f.FIGURE.l], '<ButtonRelease-1>', self.load_line_settings)
@@ -322,6 +338,7 @@ class App(Tk):
         self.canva.tag_bind(butt, '<ButtonRelease-1>', self.load_cylinder_settings)
         self.canva.tag_bind(graph.AREA[f.FIGURE.cy], '<ButtonRelease-1>', self.load_cylinder_settings)
           
+    # загрузка интерфейса инструмента «изменение цвета» при следующем режиме mode
     def load_cc_settings(self, mode):
         for i in range(3):
             for j in range(3):
@@ -329,11 +346,12 @@ class App(Tk):
                 r = self.canva.create_rectangle(const.colors_button(i, j), graph.change_color(color, "color"))
                 self.canva.tag_bind(r, '<Button-1>', lambda event, c = color, m = mode: self.change_color(event, c, mode))
 
+    # загрузка интерфейса инструмента «выделение по линии» при нажатии мыши (event)
     def load_line_settings(self, event):
         self.canva.itemconfig(graph.AREA[f.FIGURE.l], graph.area_button_change)
         self.figure = f.Line(self.field.height, self.field.width, IntVar(), IntVar(), StringVar())
-        self.figure.length.set(5)
-        self.figure.width.set(5)
+        self.figure.length.set(const.cell_foot_size)
+        self.figure.width.set(const.cell_foot_size)
         self.figure.orientation.set('n')
         graph.DIM_1.config(variable = self.figure.length)
         graph.DIM_2.config(variable = self.figure.width)
@@ -341,38 +359,42 @@ class App(Tk):
         self.change_regime(const.REGIME.select)
         graph.load_line_settings()
         
+    # загрузка интерфейса инструмента «выделение в сфере» при нажатии мыши (event)
     def load_sphere_settings(self, event):
         self.canva.itemconfig(graph.AREA[f.FIGURE.s], graph.area_button_change)
         self.figure = f.Sphere(self.field.height, self.field.width, IntVar())
         graph.load_sphere_settings()
         graph.DIM_1.config(variable = self.figure.radius)
-        self.figure.radius.set(5)
+        self.figure.radius.set(const.cell_foot_size)
         self.change_regime(const.REGIME.select)
         
+    # загрузка интерфейса инструмента «выделение в конусе» при нажатии мыши (event)
     def load_cone_settings(self, event):
         self.canva.itemconfig(graph.AREA[f.FIGURE.co], graph.area_button_change)
         self.figure = f.Cone(self.field.height, self.field.width, IntVar(), StringVar())
         graph.DIM_1.config(variable = self.figure.width)
-        self.figure.width.set(5)
+        self.figure.width.set(const.cell_foot_size)
         self.figure.orientation.set('n')
         
         self.change_regime(const.REGIME.select)
         graph.load_cone_settings()
         
+    # загрузка интерфейса инструмента «выделение в кубе» при нажатии мыши (event)
     def load_cube_settings(self, event):
         self.canva.itemconfig(graph.AREA[f.FIGURE.cu], graph.area_button_change)
         self.figure = f.Cube(self.field.height, self.field.width, IntVar())
-        self.figure.length.set(5)
+        self.figure.length.set(const.cell_foot_size)
         graph.DIM_1.config(variable = self.figure.length)
         
         self.change_regime(const.REGIME.select)
         graph.load_cube_settings()
         
+    # загрузка интерфейса инструмента «выделение в цилиндре» при нажатии мыши (event)
     def load_cylinder_settings(self, event):
         self.canva.itemconfig(graph.AREA[f.FIGURE.cy], graph.area_button_change)
         self.figure = f.Cylinder(self.field.height, self.field.width, IntVar(), IntVar())
-        self.figure.length.set(5)
-        self.figure.width.set(5)
+        self.figure.length.set(const.cell_foot_size)
+        self.figure.width.set(const.cell_foot_size)
         graph.DIM_1.config(variable = self.figure.length)
         graph.DIM_2.config(variable = self.figure.width)
         
@@ -380,14 +402,17 @@ class App(Tk):
         graph.load_cylinder_settings()
 
     
+    # удаление интерфейса инструмента «изменение цвета»
     def del_cc_settings(self):
         self.clean(["color"])
         graph.COLOR.place_forget()
     
+    # удаление интерфейса инструмента «редактирование информации»
     def del_info_settings(self):
         graph.del_info_settings()
         graph.GROUP.config(graph.group_set(self.token_group.get()))
     
+    # удаление интерфейса инструмента «выделение…»
     def del_select_settings(self):
         for butt in graph.AREA.values():
             self.canva.itemconfig(butt, graph.area_button)
@@ -395,6 +420,7 @@ class App(Tk):
     
     
     
+    # функция управления сменой режимов на new
     def change_regime(self, new):
         #print(self.regime, ' - ', new)
         self.clean(['highlight'])
@@ -405,7 +431,7 @@ class App(Tk):
             graph.DELETE.config(graph.delete_button_1)
             graph.GAME.config(graph.initiative_button_1)
             self.token_color = graph.token_colors[0]
-            self.token_size_foot.set(5)
+            self.token_size_foot.set(const.cell_foot_size)
             self.ruler_mode.set(1)
             self.ruler_text = ''
             self.token_group.set(f.GROUPS[0])
@@ -446,7 +472,8 @@ class App(Tk):
         elif self.regime == const.REGIME.coloring:
             self.canva.unbind('<Button-1>')
             self.canva.tag_unbind(graph.COLOR_BUT, '<Button-1>')
-            self.canva.tag_bind(graph.COLOR_BUT, '<Button-1>', self.coloring)
+            self.canva.tag_bind(graph.COLOR_BUT, '<Button-1>',
+                                lambda event, m = const.REGIME.coloring: self.change_regime(m))
             self.canva.itemconfig(graph.COLOR_BUT, graph.stop_coloring)
             if new == const.REGIME.color:
                 self.regime = new
@@ -530,7 +557,7 @@ class App(Tk):
         elif new == const.REGIME.add:
             graph.TOKENS.config(graph.tokens_button_2)
             graph.load_size_settings() 
-            self.adding_token()
+            self.create_token()
             self.canva.bind('<Button-1>', self.add_token)
             self.canva.bind('<Motion>', self.move_object)
         
@@ -578,18 +605,23 @@ class App(Tk):
             self.end_playing()
     
     
+    
+    # функция создания изображения фишки t, возвращает id изображения
     def draw_token(self, t):
         h, w, c = self.field.height, self.field.width, self.cell_size
         return self.canva.create_oval(const.get_token_coords(t, h, w, c, self.regime), graph.token(t, c))
     
+    # функция отрисовки фишек на поле в режиме игры
     def draw_tokens(self):
         for i,j in self.tokens_to_put:
             self.field.net[i][j].token.ID = self.draw_token(self.field.net[i][j].token)
         self.tokens_to_put = []
     
+    # получить размер фишки в клетках
     def get_token_size(self):
-        return self.token_size_foot.get() // 5
+        return self.token_size_foot.get() // const.cell_foot_size
     
+    # функция передвижения объекта за мышью (event)
     def move_object(self, event):
         c = self.cell_size//2
         if self.area:
@@ -599,6 +631,7 @@ class App(Tk):
             n = 2*self.get_token_size()-1
             self.canva.coords(self.moving_obj[0], event.x-c, event.y-c, event.x+n*c, event.y+n*c)
     
+    # определить фишку для передвижения по нажатию мыши (event)
     def move_token(self, event):
         x, y = event.x, event.y
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -609,8 +642,9 @@ class App(Tk):
             if t:
                 if self.helper:
                     if t.ID == self.helper.player.ID:
+                        self.make_step(i, j)
                         return
-                self.token_size_foot.set(t.size*5)
+                self.token_size_foot.set(t.size*const.cell_foot_size)
                 self.moving_obj.append(self.canva.create_rectangle(const.get_token_coords(t, h, w, c, m),
                                                               graph.moving_object(t, c)))
                 self.moving_token = t
@@ -619,7 +653,8 @@ class App(Tk):
             elif self.helper:
                 self.make_step(i, j)
                         
-    def put_check(self, i, j, size, h, w, c, m):
+    # перемещение фишки нового размера size: проверка координат (i, j) по параметрам поля h, w, c, m
+    def put_token(self, i, j, size, h, w, c, m):
         t = self.moving_token
         if self.field.check_cells(i, j, size):
             t.change_coords(i, j)
@@ -627,6 +662,7 @@ class App(Tk):
             self.canva.coords(t.ID, const.get_token_coords(t, h, w, c, m))
         return t
         
+    # переместить объект на указанное мышью (event) место
     def put_object(self, event):
         x, y = event.x, event.y
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -636,7 +672,7 @@ class App(Tk):
             if self.moving_token:
                 t = self.moving_token
                 self.field.delete_token(t)
-                t = self.put_check(i, j, self.get_token_size(), h, w, c, m)
+                t = self.put_token(i, j, self.get_token_size(), h, w, c, m)
                 self.field.add_token(t)
                 self.change_regime(const.REGIME.move)
                 if self.helper:
@@ -651,7 +687,7 @@ class App(Tk):
                     new_area = []
                     for t in self.area.tokens:
                         self.moving_token = t
-                        new_area.append(self.put_check(i + t.x - x_0, j + t.y - y_0, t.size, h, w, c, m))
+                        new_area.append(self.put_token(i + t.x - x_0, j + t.y - y_0, t.size, h, w, c, m))
                         if self.helper:
                             self.helper.change_info(t)
                     self.area = f.Area(new_area)
@@ -663,12 +699,14 @@ class App(Tk):
         else:
             self.change_regime(const.REGIME.together)
     
-    def adding_token(self):
+    # создание новой фишки
+    def create_token(self):
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
         t = f.Token(0, 0, color = self.token_color, group = self.token_group.get())
         self.moving_obj.append(self.canva.create_oval(const.get_new_coords(self.get_token_size(), h, w, c, m),
                                                   graph.token(t, c)))        
     
+    # разместить новую фишку на указанное мышью (event) место
     def add_token(self, event):
         x, y = event.x, event.y
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -684,6 +722,7 @@ class App(Tk):
                     self.next_round()
         self.change_regime(const.REGIME.move)
        
+    # удалить фишку на указанном мышью (event) месте
     def del_token(self, event):
         x, y = event.x, event.y
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -698,6 +737,7 @@ class App(Tk):
                     self.helper.remove_toke(t)
                     self.next_round()
     
+    # удалить все фишки с поля
     def clean_field(self):
         if graph.delete_message():
             for t in self.field.get_tokens():
@@ -706,9 +746,11 @@ class App(Tk):
             if self.helper:
                 self.end_playing()
     
+    # открыть панель для смены цвета при нажатии мыши (event)
     def open_colors(self, event):
         self.change_regime(const.REGIME.color)
     
+    # изменить цвет на c при выборе мышью (event) настроек в зависимости от mode
     def change_color(self, event, c, mode):
         self.token_color = c
         self.canva.itemconfig(graph.COLOR_BUT, fill = c)
@@ -718,14 +760,13 @@ class App(Tk):
             graph.highlight_color = c
         self.change_regime(mode)
     
+    # выбор цвета из расширенной палитры
     def set_color(self):
         color = graph.ask_color()
         if color:
             self.change_color(None, color, const.REGIME.move)
             
-    def coloring(self, event):
-        self.change_regime(const.REGIME.coloring)
-            
+    # изменить цвет фишки при выборе мышью (event)
     def change_token_color(self, event):
         x, y = event.x, event.y
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -737,6 +778,7 @@ class App(Tk):
                 self.field.net[i][j].token.color = self.token_color
                 self.canva.itemconfig(t.ID, fill = self.token_color)
                 
+    # функция передвижения линейки за мышью (event)
     def move_ruler(self, event):
         x_0, y_0 = self.ruler
         x_1, y_1 = event.x, event.y
@@ -749,6 +791,7 @@ class App(Tk):
         else:
             self.canva.itemconfig(self.moving_obj[1], anchor = 's', text = self.ruler_text)
     
+    # функция начала отсчета инструмента «линейка» при нажатии мышью (event)
     def start_count(self, event):
         self.clean(self.moving_obj)
         self.moving_obj = []
@@ -763,6 +806,7 @@ class App(Tk):
             self.canva.unbind('<Button-1>')
             self.canva.bind('<Button-1>', self.end_count)
             
+    # функция окончания отсчета инструмента «линейка» при нажатии мышью (event)
     def end_count(self, event):
         x, y = event.x, event.y
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -772,6 +816,7 @@ class App(Tk):
             self.canva.unbind('<Button-1>')
             self.canva.bind('<Button-1>', self.start_count)            
     
+    # выделение фишек на поле
     def highlight_token(self):
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
         if self.area:
@@ -780,6 +825,7 @@ class App(Tk):
         if self.chosen_token:
             self.canva.create_rectangle(const.get_area_coords(self.chosen_token, h, w, c, m), graph.highlight())
     
+    # загрузка информации о персонаже
     def load_info(self):
         graph.NAME.insert(0, self.chosen_token.name)
         graph.SPEED.insert(0, self.chosen_token.speed)
@@ -789,6 +835,7 @@ class App(Tk):
         self.token_group.set(self.chosen_token.group)
         graph.GROUP.config(graph.group_set(self.token_group.get()))        
     
+    # функция определения персонажа для отображения информации по нажатию мыши (event)
     def info_token(self, event):
         x, y = event.x, event.y
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -800,6 +847,7 @@ class App(Tk):
                 self.chosen_token = t
                 self.change_regime(const.REGIME.info)
     
+    # функция завершения отображения информации при нажатии мыши (event)
     def end_info(self, event):
         if self.helper:
             if event:
@@ -811,6 +859,7 @@ class App(Tk):
                     self.make_step(i, j)
         self.change_regime(const.REGIME.move)
     
+    # смена группы у фишек
     def change_group(self):
         num = f.GROUPS.index(self.token_group.get())
         if num == len(f.GROUPS)-1:
@@ -832,6 +881,7 @@ class App(Tk):
         graph.GROUP.config(graph.group_set(color))
         
     
+    # сохранение информации о персонаже 
     def save_info(self):
         if self.chosen_token:
             i, j = self.chosen_token.x, self.chosen_token.y
@@ -843,10 +893,12 @@ class App(Tk):
             if self.helper:
                 self.helper.change_info(self.field.net[i][j].token)
     
+    # сохранение информации о персонаже при нажатии Enter (event)
     def info_return(self, event):
         self.save_info()
         self.end_info(None)
     
+    # выделение фишек, попавших в область, при нажатии мыши (event)
     def create_area(self, event):
         self.canva.unbind('<Motion>')
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -857,6 +909,7 @@ class App(Tk):
         else:
             self.change_regime(const.REGIME.move)
     
+    # выделение области по положению мыши (event)
     def select_area(self, event):
         self.clean(['highlight'])
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -864,6 +917,7 @@ class App(Tk):
         for x, y in self.figure.count_coords(int((event.y-y_0)//c), int((event.x-x_0)//c)):
             self.canva.create_rectangle(const.get_cell_coords(x, y, h, w, c, m), graph.highlight())  
     
+    # функция определения фишек, попавших в выделенную область area
     def chose_tokens(self, area):
         new_area = []
         for i, j in area:
@@ -873,9 +927,11 @@ class App(Tk):
         if new_area:
             self.area = f.Area(new_area)
     
+    # изменить направление для фигурной области на t
     def set_but_text(self, t):
         self.figure.orientation.set(t)
      
+    # определить выделенные фишки для передвижения по нажатию мыши (event)
     def move_together(self, event):
         x, y = event.x, event.y
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
@@ -897,23 +953,23 @@ class App(Tk):
             elif self.helper:
                 if self.make_step(i, j):
                     return
-        self.end_together()
-    
-    def end_together(self):
-        self.change_regime(const.REGIME.move)
+        self.change_regime(const.REGIME.move)    
     
     
+    # нарисовать звезду
     def draw_star(self):
         self.clean(['star'])
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
         self.canva.create_polygon(const.star_coords(self.helper.player, h, w, c, m), graph.star)
     
+    # отрисовать выбранный шаг на клетку (i, j) n-ый раз
     def draw_step(self, i, j, n):
         h, w, c, m = self.field.height, self.field.width, self.cell_size, self.regime
         for dx in range(self.helper.player.size):
             for dy in range(self.helper.player.size):
                 self.canva.create_rectangle(const.get_cell_coords(i+dx, j+dy, h, w, c, m), graph.step_color(n))
     
+    # сделать шаг на клетку (x, y), возвращает успешность
     def make_step(self, x, y):
         if self.helper.do_next_step(x, y, self.field):
             self.clean(['step'])
@@ -921,12 +977,8 @@ class App(Tk):
                 self.draw_step(i, j, self.helper.path.count((i, j)))
             return True
         return False
-    
-    def upload_listbox(self, text):
-        graph.INITIATIVE.delete(0, graph.INITIATIVE.size())
-        for s in text:
-            graph.INITIATIVE.insert(END, s)        
-    
+           
+    # начать пошаговую игру
     def start_playing(self):
         tokens = self.field.get_tokens()
         if tokens:
@@ -935,9 +987,10 @@ class App(Tk):
             graph.GAME.config(**graph.initiative_button_2, command = self.end_playing)
             graph.TEXT_6.config(textvariable = self.helper.end_of_turn)
             graph.load_playing_settings()
-            self.upload_listbox(self.helper.give_inic())
+            graph.upload_listbox(self.helper.give_inic())
             self.bind('<space>', self.turn_next)
     
+    # начать ход заново
     def turn_again(self):
         self.clean(['step'])
         if self.regime == const.REGIME.moving:
@@ -947,6 +1000,7 @@ class App(Tk):
                 self.change_regime(const.REGIME.move)        
         self.helper.reset_turn()
     
+    # передать ход при нажатии на пробел (event) или на кнопку
     def turn_next(self, event):
         self.clean(['step'])
         if self.regime == const.REGIME.moving:
@@ -965,8 +1019,9 @@ class App(Tk):
         
         self.draw_star()
         
-        self.upload_listbox(self.helper.give_inic())
+        graph.upload_listbox(self.helper.give_inic())
     
+    # начать следующий раунд
     def next_round(self):
         self.clean(['step'])
         if self.regime == const.REGIME.moving:
@@ -976,8 +1031,9 @@ class App(Tk):
                 self.change_regime(const.REGIME.move)        
         self.helper.next_round()
         self.draw_star()
-        self.upload_listbox(self.helper.give_inic())
+        graph.upload_listbox(self.helper.give_inic())
     
+    # закончить пошаговую игру
     def end_playing(self):
         graph.GAME.config(**graph.initiative_button_1, command = self.start_playing)
         graph.del_playing_settings()
@@ -985,6 +1041,7 @@ class App(Tk):
         self.clean(['star', 'step'])
         self.unbind('<space>')
     
+    # загрузка режима игры
     def to_game(self):
         self.change_regime(const.REGIME.move)
         
@@ -993,7 +1050,7 @@ class App(Tk):
         self.draw_map()
         self.draw_tokens()
                 
-        
+    # завершение режима игры 
     def out_game(self):
         self.change_regime(const.REGIME.editor)
         

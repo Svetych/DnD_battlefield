@@ -28,10 +28,12 @@ class Token():
         self.ac = ac
         self.initiative = initiative
     
+    # поменять координаты фишки на сетке
     def change_coords(self, x, y):
         self.x = x
         self.y = y
     
+    # посчитать координаты всех занимаемых фишкой клеток на поле
     def count_coords(self):
         res = []
         for i in range(self.size):
@@ -39,6 +41,7 @@ class Token():
                 res.append((self.x+i, self.y+j))
         return res
     
+    # получить словарь из значений полей
     def get_config(self):
         config = {}
         config['x'] = self.x
@@ -68,17 +71,21 @@ class Field():
                 s.append(Cell())
             self.net.append(s)
     
+    # поменять вид клетки (x, y) на o
     def change_cell(self, x, y, o):
         self.net[x][y].occupied = o
     
+    # добавить фишку t на поле
     def add_token(self, t):
         for i, j in t.count_coords():
             self.net[i][j].token = t
             
+    # удалить фишку t с поля
     def delete_token(self, t):
         for i, j in t.count_coords():
             self.net[i][j].token = None 
     
+    # проверить, можно ли поставить фишку размера size на место (x, y)
     def check_cells(self, x, y, size):
         if x+size > self.height or y+size > self.width:
             return False
@@ -88,6 +95,7 @@ class Field():
                     return False
         return True
     
+    # проверить, заденет ли фишка размера size и с (x, y) труднопроходимую клетку
     def check_terrain(self, x, y, size):
         for i in range(size):
             for j in range(size):
@@ -95,6 +103,7 @@ class Field():
                     return True
         return False
     
+    # получить массив словарей из значений полей каждой фишки на поле
     def make_config(self):
         configs = []
         tokens = set([])
@@ -106,6 +115,7 @@ class Field():
                     configs.append(t.get_config())
         return configs
     
+    # получить массив из фишек на поле
     def get_tokens(self):
         res = []
         for i in range(self.height):
@@ -115,6 +125,7 @@ class Field():
                     res.append(t)
         return res
     
+    # получить массив из координат фишек на поле
     def get_tokens_coords(self):
         res = []
         tokens = set([])
@@ -138,11 +149,13 @@ class Figure():
         self.max_height = h
         self.max_width = w
         
+    # проверка выхода за границы при расчете координат области
     def check_borders(self, i, j):
         return i >= 0 and i < self.max_height and j >= 0 and j < self.max_width
     
+    # перевести размер x в футах в клетки
     def get_true_size(self, x):
-        return x // 5    
+        return x // const.cell_foot_size
 
 class Line(Figure):
     def __init__(self, m_h, m_w, l, w, o):
@@ -152,6 +165,7 @@ class Line(Figure):
         self.width = w
         self.orientation = o
         
+    # рассчитать координаты области с началом в клетке с координатами (x,y)
     def count_coords(self, x, y):
         res = []
         dx, dy = ORIENT[self.orientation.get()]
@@ -178,6 +192,7 @@ class Sphere(Figure):
         
         self.radius = r
         
+    # рассчитать координаты области с началом в клетке с координатами (x,y)
     def count_coords(self, x, y):
         res = []
         radius = self.get_true_size(self.radius.get())
@@ -195,6 +210,7 @@ class Cube(Figure):
         
         self.length = l
         
+    # рассчитать координаты области с началом в клетке с координатами (x,y)
     def count_coords(self, x, y):
         res = []
         length = self.get_true_size(self.length.get())
@@ -211,6 +227,7 @@ class Cylinder(Figure):
         self.length = l
         self.width = w
         
+    # рассчитать координаты области с началом в клетке с координатами (x,y)
     def count_coords(self, x, y):
         res = []
         length, width = self.get_true_size(self.length.get()), self.get_true_size(self.width.get())
@@ -227,6 +244,7 @@ class Cone(Figure):
         self.width = w
         self.orientation = o
         
+    # рассчитать координаты области с началом в клетке с координатами (x,y)
     def count_coords(self, x, y):
         res = []
         width = self.get_true_size(self.width.get())
@@ -267,18 +285,20 @@ class Cone(Figure):
     
 
 class Area():
-    def __init__(self, area):
-        self.tokens = area
+    def __init__(self, tokens):
+        self.tokens = tokens
         x_0, y_0 = self.get_min_coords()
         self.x = x_0
         self.y = y_0
         
+    # найти левую верхнюю координату области
     def get_min_coords(self):
         x_0, y_0 = self.tokens[0].x, self.tokens[0].y
         for t in self.tokens:
             x_0, y_0 = min(x_0, t.x), min(y_0, t.y)
         return x_0, y_0
     
+    # найти смещение абсолютной координаты фишки t относительно курсора (x, y) при c = половине длины клетки
     def get_coords(self, t, x, y, c):
         i_0, j_0 = self.x, self.y
         n_0, m_0, n_1, m_1 = 2*(t.x-i_0)-1, 2*(t.y-j_0)-1, 2*(t.x-i_0+t.size)-1, 2*(t.y-j_0+t.size)-1
@@ -292,11 +312,12 @@ class Game():
         self.end_of_turn = strvar
         self.end_of_turn.set('')
         self.player = self.initiative[0]
-        self.speed = self.player.speed // 5
+        self.speed = self.player.speed // const.cell_foot_size
         self.coords = (self.player.x, self.player.y)
         self.path = [self.coords]
         self.flag_diag = True
         
+    # получить координаты для следующего хода на поле field
     def get_next_step(self, field):
         x, y = self.path[-1]
         res = []
@@ -309,6 +330,7 @@ class Game():
                 res.append((i, j))
         return res
     
+    # проверка конца хода на поле field
     def check_speed(self, field):
         if self.speed == 0:
             return True
@@ -329,6 +351,7 @@ class Game():
                         return False
         return True
     
+    # получить координаты фишки размера size на следующем шаге при выборе координат (x, y) 
     def get_new_coords(self, x, y, size):
         x_0, y_0 = self.path[-1]
         dx, dy = 0, 0
@@ -342,6 +365,7 @@ class Game():
             dy = -1
         return x_0+dx, y_0 + dy
     
+    # сделать следующий шаг при выборе координат (x, y) на поле field
     def do_next_step(self, x, y, field):
         x_0, y_0 = self.path[-1]
         size = self.player.size
@@ -368,6 +392,7 @@ class Game():
         field.add_token(self.player)
         return False
      
+    # сбросить ход
     def renew(self):
         self.end_of_turn.set('')
         self.player = self.initiative[self.turn]
@@ -376,13 +401,16 @@ class Game():
         self.path = [self.coords]
         self.flag_diag = True
     
+    # перезапустить ход
     def reset_turn(self):
         self.renew()
         
+    # следующий раунд
     def next_round(self):
         self.turn = 0
         self.renew()
         
+    # передать ход
     def next_turn(self):
         self.turn += 1
         if self.turn == len(self.initiative):
@@ -390,11 +418,13 @@ class Game():
         else:
             self.renew()
             
+    # пересчитать инициативу и перезапустить раунд
     def reset_initiative(self):
         self.initiative = sorted(self.initiative, key = lambda x: x.initiative)
         self.initiative.reverse()
         self.next_round()
             
+    # перезаписать фишку token
     def change_info(self, token):
         i = -1
         for j, t in enumerate(self.initiative):
@@ -404,6 +434,7 @@ class Game():
             self.initiative.pop(i)
             self.append(token)
         
+    # удалить фишку token из инициативы
     def remove_toke(self, token):
         self.initiative.remove(token)
         if self.initiative:
@@ -411,10 +442,12 @@ class Game():
             return True
         return False
         
+    # добавить фишку token в инициативу
     def add_toke(self, token):
         self.initiative.append(token)
         self.reset_initiative()
         
+    # получить список из строк текста для отображения инициативы
     def give_inic(self):
         res = []
         for i in range(self.turn, len(self.initiative)):
